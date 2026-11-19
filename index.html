@@ -566,30 +566,40 @@
       }
     }
 
-    async function enviarNotificacionCorreo(tipo, payload) {
-      const lista = tipo === "dvr" ? configSistema.correos_alertas_dvr : configSistema.correos_movimientos;
-      const destinatarios = (lista || "")
-        .split(",")
-        .map(c => c.trim())
-        .filter(Boolean);
+   async function enviarNotificacionCorreo(tipo, payload) {
+  const lista = tipo === "dvr" ? configSistema.correos_alertas_dvr : configSistema.correos_movimientos;
+  const destinatarios = (lista || "")
+    .split(",")
+    .map(c => c.trim())
+    .filter(Boolean);
 
-      if (!destinatarios.length || !configSistema.webhook_correo_url) return;
+  if (!destinatarios.length || !configSistema.webhook_correo_url) return;
 
-      try {
-        await fetch(configSistema.webhook_correo_url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            tipo,
-            destinatarios,
-            ...payload,
-            fecha: new Date().toISOString()
-          })
-        });
-      } catch (e) {
-        console.warn("No se pudo enviar notificación por webhook:", e);
-      }
+  try {
+    const resp = await fetch(configSistema.webhook_correo_url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
+      },
+      body: JSON.stringify({
+        tipo,
+        destinatarios,
+        ...payload,
+        fecha: new Date().toISOString()
+      })
+    });
+
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok || data.ok === false) {
+      console.warn("Error en envío de correo:", resp.status, data);
+      notify(`⚠️ Correo no enviado (${resp.status})`, "#e67e22");
     }
+  } catch (e) {
+    console.warn("No se pudo enviar notificación por webhook:", e);
+  }
+}
 
     async function startApp() {
       document.getElementById("login-screen").style.display = "none";
