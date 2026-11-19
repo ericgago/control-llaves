@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Control de Llaves</title>
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+  <style>
+    :root {
+      --disponible: #27ae60;
+      --prestado: #e74c3c;
+      --vacio: #dfe6e9;
+      --dark: #2c3e50;
+      --accent: #3498db;
+      --warn: #e67e22;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      margin: 0;
+      background: #f4f7f6;
+      color: var(--dark);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Login */
+    #login-screen {
+      position: fixed;
+      inset: 0;
+      background: #eef2f5;
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .login-box {
+      background: white;
+      width: 100%;
+      max-width: 380px;
+      padding: 28px;
+      border-radius: 20px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+      text-align: center;
+    }
+
+    /* Header */
+    header {
+      background: white;
+      padding: 12px 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      border-bottom: 2px solid #e2e8f0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-left { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+    .btn-header {
+      background: #ebf5fb;
+      color: #2980b9;
+      border: 1px solid #2980b9;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.75em;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .btn-header.audit {
+      background: #fef9e7;
+      color: #b7950b;
+      border-color: #d4ac0d;
+    }
+    .btn-logout {
+      color: var(--prestado);
+      font-size: 0.8em;
+      font-weight: bold;
+      cursor: pointer;
+      padding: 6px 10px;
+    }
+
+    /* Buscador */
+    .search-bar { padding: 12px 15px 4px; max-width: 1200px; margin: auto; }
+    .search-input {
+      width: 100%;
+      padding: 12px 18px;
+      border-radius: 25px;
+      border: 1px solid #cbd5e1;
+      font-size: 15px;
+      background: white;
+      outline: none;
+    }
+
+    /* Tablero */
+    .tablero {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      padding: 15px;
+      max-width: 1200px;
+      margin: auto;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 10px;
+      text-align: center;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+      border-bottom: 6px solid var(--vacio);
+      min-height: 185px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .card.Disponible { border-bottom-color: var(--disponible); }
+    .card.Prestado { border-bottom-color: var(--prestado); }
+    .id-hueco {
+      font-size: 1.9em;
+      font-weight: 900;
+      color: #cbd5e1;
+      cursor: pointer;
+      transition: transform 0.15s, color 0.15s;
+    }
+    .id-hueco:hover { color: var(--accent); transform: scale(1.08); }
+    .Disponible .id-hueco { color: var(--disponible); }
+    .Prestado .id-hueco { color: var(--prestado); }
+
+    .modelo {
+      font-size: 0.85em;
+      font-weight: bold;
+      min-height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1.15;
+    }
+    .color-txt { font-size: 0.72em; color: #64748b; }
+    .vin { font-size: 0.75em; color: #64748b; font-family: monospace; font-weight: bold; margin-top: 2px; }
+    .responsable { font-size: 0.68em; color: var(--prestado); font-weight: bold; min-height: 16px; margin-top: 4px; }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 0.75em;
+      margin-top: 6px;
+    }
+    .btn-take { background: var(--accent); color: white; }
+    .btn-return { background: var(--warn); color: white; }
+    .btn-edit { background: #f1c40f; color: var(--dark); font-size: 0.68em; padding: 7px; }
+
+    /* Modales */
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.65);
+      z-index: 1500;
+      align-items: center;
+      justify-content: center;
+      padding: 15px;
+    }
+    .modal-content {
+      background: white;
+      padding: 24px;
+      border-radius: 20px;
+      width: 100%;
+      max-width: 420px;
+      max-height: 85vh;
+      overflow-y: auto;
+      text-align: left;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    }
+    .modal-content.wide { max-width: 680px; }
+    .modal-content label {
+      display: block;
+      font-weight: 600;
+      font-size: 0.82em;
+      margin-bottom: 5px;
+      color: #475569;
+    }
+    .modal-content input,
+    .modal-content textarea {
+      width: 100%;
+      padding: 11px 12px;
+      margin-bottom: 14px;
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      font-size: 15px;
+      font-family: inherit;
+    }
+    .modal-actions { display: flex; gap: 10px; margin-top: 8px; }
+    .btn-cancel { background: #e2e8f0; color: var(--dark); flex: 1; margin-top: 0; }
+    .btn-primary { background: var(--accent); color: white; flex: 2; margin-top: 0; }
+    .btn-success { background: var(--disponible); color: white; flex: 2; margin-top: 0; }
+    .btn-danger { background: var(--prestado); color: white; flex: 2; margin-top: 0; }
+
+    .delete-link {
+      color: var(--prestado);
+      text-align: center;
+      font-size: 0.8em;
+      margin-top: 14px;
+      cursor: pointer;
+      text-decoration: underline;
+      font-weight: bold;
+    }
+
+    /* Tablas en modales */
+    table { width: 100%; border-collapse: collapse; font-size: 0.8em; margin-top: 10px; }
+    th { background: #f8fafc; padding: 8px; text-align: left; border-bottom: 2px solid #e2e8f0; }
+    td { padding: 8px; border-bottom: 1px solid #f1f5f9; }
+
+    /* Loader */
+    #loader {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(255,255,255,0.88);
+      z-index: 3000;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      gap: 10px;
+    }
+
+    @media (max-width: 850px) { .tablero { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 520px) { .tablero { grid-template-columns: repeat(2, 1fr); } }
+  </style>
+</head>
+<body>
+
+  <div id="loader">
+    <div>⚙️ <span id="loader-text">Procesando...</span></div>
+  </div>
+
+  <!-- Login -->
+  <div id="login-screen">
+    <div class="login-box">
+      <h2 style="margin-top:0;">🔑 Control de Llaves</h2>
+      <input type="email" id="email" placeholder="Correo electrónico" style="width:100%; padding:12px; margin:8px 0; border:1px solid #cbd5e1; border-radius:10px; font-size:15px;">
+      <input type="password" id="pass" placeholder="Contraseña" style="width:100%; padding:12px; margin:8px 0; border:1px solid #cbd5e1; border-radius:10px; font-size:15px;">
+      <button onclick="handleLogin()" style="background:var(--dark); color:white; padding:13px; font-size:0.9em; margin-top:12px;">ENTRAR</button>
+    </div>
+  </div>
+
+  <!-- App Principal -->
+  <div id="app" style="display:none;">
+    <header>
+      <div class="header-left" id="header-user"></div>
+      <div class="btn-logout" onclick="handleLogout()">SALIR</div>
+    </header>
+
+    <div class="search-bar">
+      <input type="text" id="search-input" class="search-input" placeholder="Buscar por hueco, modelo, color o VIN..." onkeyup="filtrarTablero()">
+    </div>
+
+    <div class="tablero" id="grid"></div>
+  </div>
+
+  <!-- Modal Confirmar Préstamo -->
+  <div id="modal-confirm" class="modal">
+    <div class="modal-content" style="text-align:center;">
+      <h3 style="margin-top:0;">Confirmar préstamo</h3>
+      <p id="confirm-body" style="color:#475569; font-size:0.92em;"></p>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeModal('modal-confirm')">Cancelar</button>
+        <button id="btn-confirm-ok" class="btn-primary">Sí, tomar llave</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Editar / Asignar -->
+  <div id="modal-edit" class="modal">
+    <div class="modal-content">
+      <h3 style="margin:0 0 18px 0; display:flex; align-items:center; gap:10px;">
+        <span id="edit-id-badge" style="background:var(--accent); color:white; padding:4px 10px; border-radius:8px; font-size:0.85em;"></span>
+        Configurar hueco
+      </h3>
+      <input type="hidden" id="edit-id">
+      <label>Modelo del vehículo</label>
+      <input type="text" id="edit-modelo" placeholder="Ej. Tucson 2025">
+      <label>Color</label>
+      <input type="text" id="edit-color" placeholder="Ej. Plata">
+      <label>VIN (6 dígitos)</label>
+      <input type="text" id="edit-vin" maxlength="6" placeholder="Obligatorio">
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeModal('modal-edit')">Cerrar</button>
+        <button class="btn-success" onclick="saveEdit()">GUARDAR</button>
+      </div>
+      <div id="btn-eliminar-link" class="delete-link" onclick="openDeleteModal()">Eliminar llave del sistema</div>
+    </div>
+  </div>
+
+  <!-- Modal Motivo de Eliminación -->
+  <div id="modal-delete" class="modal">
+    <div class="modal-content">
+      <h3 style="margin-top:0; color:var(--prestado);">Baja de llave</h3>
+      <p style="font-size:0.85em; color:#64748b; margin-top:0;">Indica el motivo para dejar registro en el historial.</p>
+      <label>Motivo de eliminación</label>
+      <textarea id="delete-motivo" rows="3" placeholder="Ej. Unidad vendida, llave extraviada..."></textarea>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeModal('modal-delete')">Cancelar</button>
+        <button class="btn-danger" onclick="confirmDelete()">CONFIRMAR BAJA</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Historial / Auditoría / Mis Llaves -->
+  <div id="modal-historial" class="modal" onclick="closeModal('modal-historial')">
+    <div class="modal-content wide" onclick="event.stopPropagation()">
+      <div id="hist-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
+        <h3 id="hist-title" style="margin:0;"></h3>
+        <input type="text" id="search-historial" placeholder="Filtrar VIN o usuario..." onkeyup="filtrarHistorial()" style="display:none; margin:0; padding:8px 12px; width:220px; font-size:13px;">
+      </div>
+      <div id="hist-body" style="overflow-x:auto;"></div>
+      <div class="modal-actions" style="margin-top:16px;">
+        <button class="btn-cancel" onclick="closeModal('modal-historial')">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const SUPABASE_URL = "https://qgalclmhqbkjhgwfhqiz.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_zPGztHBbFKIwroy2Iey5sA_pKZxbX5i";
+    const BUCKET_NAME = "evidencias-llaves";
+
+    const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let userData = null;
+    let fullTablero = [];
+    let historialCache = [];
+
+    function notify(msg, color = "#3498db") {
+      Toastify({
+        text: msg,
+        duration: 3000,
+        gravity: "top",
+        position: "right",
+        style: { background: color }
+      }).showToast();
+    }
+
+    function toggleLoader(show, text = "Procesando...") {
+      document.getElementById("loader-text").innerText = text;
+      document.getElementById("loader").style.display = show ? "flex" : "none";
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).style.display = "none";
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const vinInput = document.getElementById("edit-vin");
+      if (vinInput) {
+        vinInput.addEventListener("input", () => {
+          vinInput.value = vinInput.value.toUpperCase();
+        });
+      }
+
+      const saved = localStorage.getItem("llaves_session");
+      if (saved) {
+        userData = JSON.parse(saved);
+        startApp();
+      }
+    });
+
+    async function handleLogin() {
+      const email = document.getElementById("email").value.trim().toLowerCase();
+      const pass = document.getElementById("pass").value.trim();
+      if (!email || !pass) return notify("⚠️ Completa correo y contraseña", "#e67e22");
+
+      toggleLoader(true, "Verificando acceso...");
+      const { data, error } = await db
+        .from("usuarios")
+        .select("nombre, email, rol, activo")
+        .eq("email", email)
+        .eq("password", pass)
+        .eq("activo", true)
+        .maybeSingle();
+
+      toggleLoader(false);
+      if (error || !data) return notify("❌ Credenciales incorrectas", "#e74c3c");
+
+      userData = data;
+      localStorage.setItem("llaves_session", JSON.stringify(data));
+      startApp();
+    }
+
+    function handleLogout() {
+      localStorage.removeItem("llaves_session");
+      location.reload();
+    }
+
+    function startApp() {
+      document.getElementById("login-screen").style.display = "none";
+      document.getElementById("app").style.display = "block";
+
+      let html = `<span style="font-weight:bold; margin-right:6px;">${userData.nombre}</span>`;
+      html += `<button class="btn-header" onclick="verMisLlaves()">📋 MIS LLAVES</button>`;
+      if (userData.rol === "Controlista") {
+        html += `<button class="btn-header audit" onclick="verAuditoria()">🔍 AUDITORÍA</button>`;
+      }
+      document.getElementById("header-user").innerHTML = html;
+
+      refreshTablero();
+    }
+
+    async function refreshTablero() {
+      toggleLoader(true, "Cargando tablero...");
+      const { data, error } = await db
+        .from("tablero")
+        .select("id, modelo, color, vin, estatus, responsable")
+        .order("id", { ascending: true });
+
+      toggleLoader(false);
+      if (error) return notify("❌ Error al cargar tablero", "#e74c3c");
+
+      fullTablero = data || [];
+      renderTablero(fullTablero);
+    }
+
+    function renderTablero(lista) {
+      const grid = document.getElementById("grid");
+      grid.innerHTML = "";
+
+      lista.forEach(item => {
+        const tieneUnidad = Boolean(item.modelo && item.modelo.trim() !== "");
+        const estadoClase = tieneUnidad ? item.estatus : "Vacio";
+
+        const card = document.createElement("div");
+        card.className = `card ${estadoClase}`;
+
+        let btnAccion = "";
+        if (tieneUnidad && item.estatus === "Disponible") {
+          btnAccion = `<button class="btn-take" onclick="abrirConfirmar(${item.id}, '${escapeHtml(item.modelo)}')">TOMAR</button>`;
+        } else if (tieneUnidad && item.estatus === "Prestado") {
+          btnAccion = `<button class="btn-return" onclick="devolverLlave(${item.id}, '${escapeHtml(item.vin || "S-VIN")}')">REGRESAR</button>`;
+        }
+
+        let btnAdmin = "";
+        if (userData && userData.rol === "Controlista") {
+          btnAdmin = `<button class="btn-edit" onclick="openEdit(${item.id}, '${escapeHtml(item.modelo)}', '${escapeHtml(item.color)}', '${escapeHtml(item.vin)}')">${tieneUnidad ? "EDITAR" : "+ ASIGNAR"}</button>`;
+        }
+
+        const respHtml = item.estatus === "Prestado" ? `👤 ${escapeHtml(item.responsable || "")}` : "";
+
+        card.innerHTML = `
+          <div class="id-hueco" onclick="verHistorialVin('${escapeHtml(item.vin)}')">${item.id}</div>
+          <div class="modelo">${escapeHtml(item.modelo || "LIBRE")}</div>
+          <div class="color-txt">${escapeHtml(item.color || "")}</div>
+          <div class="vin">${escapeHtml(item.vin || "------")}</div>
+          <div class="responsable">${respHtml}</div>
+          <div style="margin-top:auto;">${btnAccion}${btnAdmin}</div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function escapeHtml(str) {
+      return String(str || "")
+        .replace(/&/g, "&")
+        .replace(/</g, "<")
+        .replace(/>/g, ">")
+        .replace(/"/g, """)
+        .replace(/'/g, "'");
+    }
+
+    function filtrarTablero() {
+      const q = document.getElementById("search-input").value.trim().toLowerCase();
+      if (!q) return renderTablero(fullTablero);
+
+      const filtrados = fullTablero.filter(r =>
+        String(r.id) === q ||
+        (r.modelo || "").toLowerCase().includes(q) ||
+        (r.color || "").toLowerCase().includes(q) ||
+        (r.vin || "").toLowerCase().includes(q) ||
+        (r.responsable || "").toLowerCase().includes(q)
+      );
+      renderTablero(filtrados);
+    }
+
+    function abrirConfirmar(id, modelo) {
+      document.getElementById("confirm-body").innerText = `¿Confirmas que tomas la llave del hueco #${id} (${modelo})?`;
+      document.getElementById("btn-confirm-ok").onclick = () => prestarLlave(id);
+      document.getElementById("modal-confirm").style.display = "flex";
+    }
+
+    async function prestarLlave(id) {
+      closeModal("modal-confirm");
+      toggleLoader(true, "Registrando préstamo...");
+
+      const unidad = fullTablero.find(x => x.id === id);
+      const { error: upErr } = await db
+        .from("tablero")
+        .update({
+          estatus: "Prestado",
+          responsable: userData.nombre,
+          actualizado_en: new Date().toISOString()
+        })
+        .eq("id", id);
+
+      if (upErr) {
+        toggleLoader(false);
+        return notify("❌ No se pudo registrar préstamo", "#e74c3c");
+      }
+
+      await db.from("historial").insert({
+        hueco: id,
+        usuario: userData.nombre,
+        accion: "Préstamo",
+        vin: unidad?.vin || ""
+      });
+
+      toggleLoader(false);
+      notify("✅ Llave prestada", "#27ae60");
+      refreshTablero();
+    }
+
+    function devolverLlave(id, vin) {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/*";
+      input.capture = "environment";
+
+      input.onchange = async e => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        toggleLoader(true, "Comprimiendo foto...");
+        const blobComprimido = await comprimirImagen(file, 800, 0.65);
+
+        toggleLoader(true, "Subiendo evidencia...");
+        const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+        const safeUser = userData.nombre.replace(/[^a-zA-Z0-9_-]/g, "_");
+        const ruta = `${vin}_${stamp}_${safeUser}.jpg`;
+
+        const { error: upStorageErr } = await db.storage
+          .from(BUCKET_NAME)
+          .upload(ruta, blobComprimido, { contentType: "image/jpeg", upsert: false });
+
+        if (upStorageErr) {
+          toggleLoader(false);
+          return notify("❌ Error al subir foto", "#e74c3c");
+        }
+
+        const { data: pubData } = db.storage.from(BUCKET_NAME).getPublicUrl(ruta);
+        const urlFoto = pubData?.publicUrl || "";
+
+        await db.from("fotos_evidencia").insert({
+          ruta_storage: ruta,
+          url_publica: urlFoto,
+          vin: vin,
+          usuario: userData.nombre,
+          tamano_bytes: blobComprimido.size
+        });
+
+        await db
+          .from("tablero")
+          .update({
+            estatus: "Disponible",
+            responsable: "",
+            actualizado_en: new Date().toISOString()
+          })
+          .eq("id", id);
+
+        await db.from("historial").insert({
+          hueco: id,
+          usuario: userData.nombre,
+          accion: "Devolución",
+          vin: vin,
+          foto_url: urlFoto
+        });
+
+        toggleLoader(false);
+        notify("✅ Devolución registrada", "#27ae60");
+        refreshTablero();
+      };
+
+      input.click();
+    }
+
+    function comprimirImagen(file, maxWidth, quality) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = ev => {
+          const img = new Image();
+          img.onload = () => {
+            const scale = Math.min(1, maxWidth / img.width);
+            const canvas = document.createElement("canvas");
+            canvas.width = Math.round(img.width * scale);
+            canvas.height = Math.round(img.height * scale);
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob(blob => {
+              if (blob) resolve(blob);
+              else reject(new Error("No se pudo comprimir"));
+            }, "image/jpeg", quality);
+          };
+          img.onerror = reject;
+          img.src = ev.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function openEdit(id, modelo, color, vin) {
+      document.getElementById("edit-id").value = id;
+      document.getElementById("edit-id-badge").innerText = `#${id}`;
+      document.getElementById("edit-modelo").value = modelo || "";
+      document.getElementById("edit-color").value = color || "";
+      document.getElementById("edit-vin").value = vin || "";
+      document.getElementById("btn-eliminar-link").style.display = modelo ? "block" : "none";
+      document.getElementById("modal-edit").style.display = "flex";
+    }
+
+    async function saveEdit() {
+      const id = Number(document.getElementById("edit-id").value);
+      const modelo = document.getElementById("edit-modelo").value.trim();
+      const color = document.getElementById("edit-color").value.trim();
+      const vin = document.getElementById("edit-vin").value.trim().toUpperCase();
+
+      if (!vin || vin.length < 6) return notify("⚠️ El VIN debe tener 6 dígitos", "#e74c3c");
+      if (!modelo) return notify("⚠️ Indica el modelo", "#e67e22");
+
+      closeModal("modal-edit");
+      toggleLoader(true, "Guardando hueco...");
+
+      const { error } = await db
+        .from("tablero")
+        .update({
+          modelo,
+          color,
+          vin,
+          estatus: "Disponible",
+          responsable: "",
+          actualizado_en: new Date().toISOString()
+        })
+        .eq("id", id);
+
+      toggleLoader(false);
+      if (error) return notify("❌ Error al guardar", "#e74c3c");
+
+      notify("✅ Hueco actualizado", "#27ae60");
+      refreshTablero();
+    }
+
+    function openDeleteModal() {
+      document.getElementById("delete-motivo").value = "";
+      document.getElementById("modal-delete").style.display = "flex";
+    }
+
+    async function confirmDelete() {
+      const motivo = document.getElementById("delete-motivo").value.trim();
+      if (motivo.length < 4) return notify("⚠️ Escribe un motivo más claro", "#e74c3c");
+
+      const id = Number(document.getElementById("edit-id").value);
+      const unidad = fullTablero.find(x => x.id === id);
+
+      closeModal("modal-delete");
+      closeModal("modal-edit");
+      toggleLoader(true, "Dando de baja...");
+
+      await db
+        .from("tablero")
+        .update({
+          modelo: "",
+          color: "",
+          vin: "",
+          estatus: "Vacio",
+          responsable: "",
+          actualizado_en: new Date().toISOString()
+        })
+        .eq("id", id);
+
+      await db.from("historial").insert({
+        hueco: id,
+        usuario: userData.nombre,
+        accion: `BAJA: ${motivo}`,
+        vin: unidad?.vin || ""
+      });
+
+      toggleLoader(false);
+      notify("✅ Llave dada de baja", "#27ae60");
+      refreshTablero();
+    }
+
+    async function verMisLlaves() {
+      document.getElementById("search-historial").style.display = "none";
+      document.getElementById("hist-title").innerText = "Mis llaves pendientes";
+      document.getElementById("hist-body").innerHTML = "⌛ Consultando...";
+      document.getElementById("modal-historial").style.display = "flex";
+
+      const { data } = await db
+        .from("tablero")
+        .select("id, modelo, vin")
+        .eq("estatus", "Prestado")
+        .eq("responsable", userData.nombre)
+        .order("id", { ascending: true });
+
+      if (!data || data.length === 0) {
+        document.getElementById("hist-body").innerHTML = "<p>No tienes llaves pendientes por devolver.</p>";
+        return;
+      }
+
+      let html = "<table><thead><tr><th>Hueco</th><th>Modelo</th><th>VIN</th></tr></thead><tbody>";
+      data.forEach(r => {
+        html += `<tr><td>#${r.id}</td><td>${escapeHtml(r.modelo)}</td><td>${escapeHtml(r.vin)}</td></tr>`;
+      });
+      document.getElementById("hist-body").innerHTML = html + "</tbody></table>";
+    }
+
+    async function verHistorialVin(vin) {
+      if (!userData || userData.rol !== "Controlista" || !vin) return;
+      document.getElementById("search-historial").style.display = "none";
+      document.getElementById("hist-title").innerText = `Historial VIN: ${vin}`;
+      document.getElementById("hist-body").innerHTML = "⌛ Buscando...";
+      document.getElementById("modal-historial").style.display = "flex";
+
+      const { data } = await db
+        .from("historial")
+        .select("hueco, usuario, accion, vin, foto_url, creado_en")
+        .eq("vin", vin)
+        .order("creado_en", { ascending: false });
+
+      renderTablaHistorial(data || []);
+    }
+
+    async function verAuditoria() {
+      const inp = document.getElementById("search-historial");
+      inp.value = "";
+      inp.style.display = "block";
+      document.getElementById("hist-title").innerText = "Auditoría General";
+      document.getElementById("hist-body").innerHTML = "⌛ Cargando...";
+      document.getElementById("modal-historial").style.display = "flex";
+
+      const { data } = await db
+        .from("historial")
+        .select("hueco, usuario, accion, vin, foto_url, creado_en")
+        .order("creado_en", { ascending: false })
+        .limit(100);
+
+      historialCache = data || [];
+      renderTablaHistorial(historialCache);
+    }
+
+    function filtrarHistorial() {
+      const q = document.getElementById("search-historial").value.trim().toLowerCase();
+      if (!q) return renderTablaHistorial(historialCache);
+
+      const filtrados = historialCache.filter(r =>
+        (r.usuario || "").toLowerCase().includes(q) ||
+        (r.vin || "").toLowerCase().includes(q) ||
+        (r.accion || "").toLowerCase().includes(q) ||
+        String(r.hueco) === q
+      );
+      renderTablaHistorial(filtrados);
+    }
+
+    function renderTablaHistorial(rows) {
+      if (!rows.length) {
+        document.getElementById("hist-body").innerHTML = "<p>No hay movimientos para mostrar.</p>";
+        return;
+      }
+
+      let html = "<table><thead><tr><th>Fecha</th><th>Hueco</th><th>Usuario</th><th>Acción</th><th>VIN</th><th>Foto</th></tr></thead><tbody>";
+      rows.forEach(r => {
+        const fecha = r.creado_en ? new Date(r.creado_en).toLocaleString("es-MX") : "";
+        const foto = r.foto_url ? `<a href="${escapeHtml(r.foto_url)}" target="_blank">Ver</a>` : "-";
+        html += `
+          <tr>
+            <td>${escapeHtml(fecha)}</td>
+            <td>#${r.hueco}</td>
+            <td>${escapeHtml(r.usuario)}</td>
+            <td>${escapeHtml(r.accion)}</td>
+            <td>${escapeHtml(r.vin || "-")}</td>
+            <td>${foto}</td>
+          </tr>
+        `;
+      });
+      document.getElementById("hist-body").innerHTML = html + "</tbody></table>";
+    }
+  </script>
+</body>
+</html>
