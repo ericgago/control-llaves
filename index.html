@@ -13,6 +13,7 @@
       --dark: #2c3e50;
       --accent: #3498db;
       --warn: #e67e22;
+      --purple: #6c5ce7;
     }
     * { box-sizing: border-box; }
     body {
@@ -63,16 +64,28 @@
       background: #ebf5fb;
       color: #2980b9;
       border: 1px solid #2980b9;
-      padding: 6px 12px;
+      padding: 7px 13px;
       border-radius: 20px;
-      font-size: 0.75em;
+      font-size: 0.76em;
       font-weight: bold;
       cursor: pointer;
+      width: auto;
+      margin-top: 0;
     }
     .btn-header.audit {
       background: #fef9e7;
       color: #b7950b;
       border-color: #d4ac0d;
+    }
+    .btn-header.users {
+      background: #eef2ff;
+      color: #4f46e5;
+      border-color: #4f46e5;
+    }
+    .btn-header.dvr {
+      background: #f3e8ff;
+      color: #7e22ce;
+      border-color: #7e22ce;
     }
     .btn-logout {
       color: var(--prestado);
@@ -171,13 +184,13 @@
       padding: 24px;
       border-radius: 20px;
       width: 100%;
-      max-width: 420px;
-      max-height: 85vh;
+      max-width: 440px;
+      max-height: 88vh;
       overflow-y: auto;
       text-align: left;
       box-shadow: 0 20px 40px rgba(0,0,0,0.2);
     }
-    .modal-content.wide { max-width: 680px; }
+    .modal-content.wide { max-width: 760px; }
     .modal-content label {
       display: block;
       font-weight: 600;
@@ -186,20 +199,23 @@
       color: #475569;
     }
     .modal-content input,
+    .modal-content select,
     .modal-content textarea {
       width: 100%;
-      padding: 11px 12px;
-      margin-bottom: 14px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
       border: 1px solid #cbd5e1;
       border-radius: 10px;
-      font-size: 15px;
+      font-size: 14px;
       font-family: inherit;
+      background: white;
     }
-    .modal-actions { display: flex; gap: 10px; margin-top: 8px; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
     .btn-cancel { background: #e2e8f0; color: var(--dark); flex: 1; margin-top: 0; }
     .btn-primary { background: var(--accent); color: white; flex: 2; margin-top: 0; }
     .btn-success { background: var(--disponible); color: white; flex: 2; margin-top: 0; }
     .btn-danger { background: var(--prestado); color: white; flex: 2; margin-top: 0; }
+    .btn-purple { background: var(--purple); color: white; flex: 2; margin-top: 0; }
 
     .delete-link {
       color: var(--prestado);
@@ -211,10 +227,51 @@
       font-weight: bold;
     }
 
+    /* Tarjetas métricas DVR */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .stat-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 12px;
+      text-align: center;
+    }
+    .stat-val { font-size: 1.35em; font-weight: 800; color: var(--dark); }
+    .stat-lbl { font-size: 0.75em; color: #64748b; margin-top: 3px; }
+    .alert-box {
+      background: #fffbeb;
+      border: 1px solid #fcd34d;
+      color: #92400e;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 0.82em;
+      margin-bottom: 14px;
+    }
+
     /* Tablas en modales */
     table { width: 100%; border-collapse: collapse; font-size: 0.8em; margin-top: 10px; }
     th { background: #f8fafc; padding: 8px; text-align: left; border-bottom: 2px solid #e2e8f0; }
     td { padding: 8px; border-bottom: 1px solid #f1f5f9; }
+    .badge {
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.72em;
+      font-weight: bold;
+    }
+    .badge-admin { background: #ede9fe; color: #5b21b6; }
+    .badge-user { background: #e0f2fe; color: #075985; }
+    .btn-mini {
+      width: auto;
+      padding: 5px 9px;
+      font-size: 0.72em;
+      margin-top: 0;
+      display: inline-block;
+    }
 
     /* Loader */
     #loader {
@@ -231,7 +288,10 @@
     }
 
     @media (max-width: 850px) { .tablero { grid-template-columns: repeat(3, 1fr); } }
-    @media (max-width: 520px) { .tablero { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 520px) {
+      .tablero { grid-template-columns: repeat(2, 1fr); }
+      .stats-grid { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
@@ -312,6 +372,94 @@
     </div>
   </div>
 
+  <!-- Modal Gestión de Usuarios y Admins -->
+  <div id="modal-usuarios" class="modal" onclick="closeModal('modal-usuarios')">
+    <div class="modal-content wide" onclick="event.stopPropagation()">
+      <h3 style="margin-top:0;">👥 Usuarios y Administradores</h3>
+      <form onsubmit="crearUsuario(event)" style="background:#f8fafc; padding:14px; border-radius:12px; border:1px solid #e2e8f0; margin-bottom:14px;">
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:10px;">
+          <div>
+            <label>Nombre completo</label>
+            <input type="text" id="new-user-nombre" required placeholder="Ej. Luis Martínez" style="margin-bottom:0;">
+          </div>
+          <div>
+            <label>Correo</label>
+            <input type="email" id="new-user-email" required placeholder="luis@agencia.com" style="margin-bottom:0;">
+          </div>
+          <div>
+            <label>Contraseña</label>
+            <input type="text" id="new-user-pass" required placeholder="Clave inicial" style="margin-bottom:0;">
+          </div>
+          <div>
+            <label>Rol</label>
+            <select id="new-user-rol" style="margin-bottom:0;">
+              <option value="Asesor">Asesor</option>
+              <option value="Controlista">Controlista (Admin)</option>
+            </select>
+          </div>
+        </div>
+        <button type="submit" class="btn-success" style="width:100%; margin-top:12px;">+ AGREGAR USUARIO</button>
+      </form>
+      <div id="lista-usuarios-body" style="overflow-x:auto;"></div>
+      <div class="modal-actions" style="margin-top:16px;">
+        <button class="btn-cancel" onclick="closeModal('modal-usuarios')">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Almacenamiento DVR y Correos -->
+  <div id="modal-dvr" class="modal" onclick="closeModal('modal-dvr')">
+    <div class="modal-content wide" onclick="event.stopPropagation()">
+      <h3 style="margin-top:0;">🗄️ Almacenamiento DVR y Notificaciones</h3>
+
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-val" id="dvr-total-fotos">0</div>
+          <div class="stat-lbl">Fotos guardadas</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val" id="dvr-espacio-mb">0.00 MB</div>
+          <div class="stat-lbl">Espacio ocupado</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val" id="dvr-por-vencer" style="color:var(--warn);">0</div>
+          <div class="stat-lbl">Por avisar / vencer</div>
+        </div>
+      </div>
+
+      <div id="dvr-alerta-banner" class="alert-box" style="display:none;"></div>
+
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:10px;">
+        <div>
+          <label>Retención de fotos (días)</label>
+          <input type="number" id="cfg-dias-retencion" min="1" max="3650" value="30">
+        </div>
+        <div>
+          <label>Días de aviso previo antes de borrar</label>
+          <input type="number" id="cfg-dias-aviso" min="1" max="90" value="5">
+        </div>
+      </div>
+
+      <label>Correos al tomar o regresar llave (separados por coma)</label>
+      <input type="text" id="cfg-correos-mov" placeholder="facturacion@agencia.com, supervisor@agencia.com">
+
+      <label>Correos para alertas DVR (aviso previo y purga de fotos viejas)</label>
+      <input type="text" id="cfg-correos-dvr" placeholder="sistemas@agencia.com, control@agencia.com">
+
+      <label>Webhook de correo (opcional: Supabase Edge Function / Make / Apps Script Web App)</label>
+      <input type="url" id="cfg-webhook-url" placeholder="https://tu-endpoint-de-correo">
+
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeModal('modal-dvr')">Cerrar</button>
+        <button class="btn-success" onclick="guardarConfiguracion()">GUARDAR CONFIGURACIÓN</button>
+        <button class="btn-purple" onclick="ejecutarLimpiezaDvr()">AVISAR Y PURGAR VENCIDAS</button>
+      </div>
+
+      <h4 style="margin:18px 0 6px;">Fotos más antiguas (orden FIFO tipo DVR)</h4>
+      <div id="dvr-tabla-fotos" style="overflow-x:auto;"></div>
+    </div>
+  </div>
+
   <!-- Modal Historial / Auditoría / Mis Llaves -->
   <div id="modal-historial" class="modal" onclick="closeModal('modal-historial')">
     <div class="modal-content wide" onclick="event.stopPropagation()">
@@ -338,6 +486,13 @@
     let userData = null;
     let fullTablero = [];
     let historialCache = [];
+    let configSistema = {
+      dias_retencion_fotos: 30,
+      dias_aviso_previo: 5,
+      correos_movimientos: "",
+      correos_alertas_dvr: "",
+      webhook_correo_url: ""
+    };
 
     function notify(msg, color = "#3498db") {
       Toastify({
@@ -381,7 +536,7 @@
       toggleLoader(true, "Verificando acceso...");
       const { data, error } = await db
         .from("usuarios")
-        .select("nombre, email, rol, activo")
+        .select("id, nombre, email, rol, activo")
         .eq("email", email)
         .eq("password", pass)
         .eq("activo", true)
@@ -400,17 +555,56 @@
       location.reload();
     }
 
-    function startApp() {
+    async function cargarConfiguracion() {
+      const { data } = await db
+        .from("configuracion_sistema")
+        .select("*")
+        .eq("id", 1)
+        .maybeSingle();
+      if (data) {
+        configSistema = { ...configSistema, ...data };
+      }
+    }
+
+    async function enviarNotificacionCorreo(tipo, payload) {
+      const lista = tipo === "dvr" ? configSistema.correos_alertas_dvr : configSistema.correos_movimientos;
+      const destinatarios = (lista || "")
+        .split(",")
+        .map(c => c.trim())
+        .filter(Boolean);
+
+      if (!destinatarios.length || !configSistema.webhook_correo_url) return;
+
+      try {
+        await fetch(configSistema.webhook_correo_url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            tipo,
+            destinatarios,
+            ...payload,
+            fecha: new Date().toISOString()
+          })
+        });
+      } catch (e) {
+        console.warn("No se pudo enviar notificación por webhook:", e);
+      }
+    }
+
+    async function startApp() {
       document.getElementById("login-screen").style.display = "none";
       document.getElementById("app").style.display = "block";
 
-      let html = `<span style="font-weight:bold; margin-right:6px;">${userData.nombre}</span>`;
+      let html = `<span style="font-weight:bold; margin-right:6px;">${escapeHtml(userData.nombre)}</span>`;
       html += `<button class="btn-header" onclick="verMisLlaves()">📋 MIS LLAVES</button>`;
       if (userData.rol === "Controlista") {
         html += `<button class="btn-header audit" onclick="verAuditoria()">🔍 AUDITORÍA</button>`;
+        html += `<button class="btn-header users" onclick="abrirUsuarios()">👥 USUARIOS</button>`;
+        html += `<button class="btn-header dvr" onclick="abrirDvr()">🗄️ DVR / CORREOS</button>`;
       }
       document.getElementById("header-user").innerHTML = html;
 
+      await cargarConfiguracion();
       refreshTablero();
     }
 
@@ -467,11 +661,11 @@
 
     function escapeHtml(str) {
       return String(str || "")
-        .replace(/&/g, "&")
-        .replace(/</g, "<")
-        .replace(/>/g, ">")
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, "'");
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
     }
 
     function filtrarTablero() {
@@ -520,6 +714,13 @@
         vin: unidad?.vin || ""
       });
 
+      await enviarNotificacionCorreo("prestamo", {
+        hueco: id,
+        usuario: userData.nombre,
+        modelo: unidad?.modelo || "",
+        vin: unidad?.vin || ""
+      });
+
       toggleLoader(false);
       notify("✅ Llave prestada", "#27ae60");
       refreshTablero();
@@ -554,6 +755,7 @@
 
         const { data: pubData } = db.storage.from(BUCKET_NAME).getPublicUrl(ruta);
         const urlFoto = pubData?.publicUrl || "";
+        const unidad = fullTablero.find(x => x.id === id);
 
         await db.from("fotos_evidencia").insert({
           ruta_storage: ruta,
@@ -576,6 +778,14 @@
           hueco: id,
           usuario: userData.nombre,
           accion: "Devolución",
+          vin: vin,
+          foto_url: urlFoto
+        });
+
+        await enviarNotificacionCorreo("devolucion", {
+          hueco: id,
+          usuario: userData.nombre,
+          modelo: unidad?.modelo || "",
           vin: vin,
           foto_url: urlFoto
         });
@@ -692,6 +902,264 @@
       toggleLoader(false);
       notify("✅ Llave dada de baja", "#27ae60");
       refreshTablero();
+    }
+
+    /* Usuarios y Admins */
+    async function abrirUsuarios() {
+      if (!userData || userData.rol !== "Controlista") return;
+      document.getElementById("modal-usuarios").style.display = "flex";
+      await cargarUsuarios();
+    }
+
+    async function cargarUsuarios() {
+      document.getElementById("lista-usuarios-body").innerHTML = "⌛ Cargando usuarios...";
+      const { data, error } = await db
+        .from("usuarios")
+        .select("id, nombre, email, rol, activo")
+        .order("nombre", { ascending: true });
+
+      if (error) {
+        document.getElementById("lista-usuarios-body").innerHTML = "<p>Error al cargar usuarios.</p>";
+        return;
+      }
+
+      if (!data || !data.length) {
+        document.getElementById("lista-usuarios-body").innerHTML = "<p>No hay usuarios registrados.</p>";
+        return;
+      }
+
+      let html = "<table><thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>";
+      data.forEach(u => {
+        const badge = u.rol === "Controlista"
+          ? `<span class="badge badge-admin">Controlista</span>`
+          : `<span class="badge badge-user">Asesor</span>`;
+        const estadoTxt = u.activo !== false ? "Activo" : "Inactivo";
+        const nextRol = u.rol === "Controlista" ? "Asesor" : "Controlista";
+        const nextActivo = u.activo === false ? true : false;
+
+        html += `
+          <tr>
+            <td>${escapeHtml(u.nombre)}</td>
+            <td>${escapeHtml(u.email)}</td>
+            <td>${badge}</td>
+            <td>${estadoTxt}</td>
+            <td style="white-space:nowrap; display:flex; gap:6px;">
+              <button class="btn-mini btn-edit" onclick="cambiarRolUsuario('${u.id}', '${nextRol}')">Hacer ${nextRol}</button>
+              <button class="btn-mini btn-cancel" onclick="toggleEstadoUsuario('${u.id}', ${nextActivo})">${nextActivo ? "Activar" : "Desactivar"}</button>
+            </td>
+          </tr>
+        `;
+      });
+      document.getElementById("lista-usuarios-body").innerHTML = html + "</tbody></table>";
+    }
+
+    async function crearUsuario(e) {
+      e.preventDefault();
+      const nombre = document.getElementById("new-user-nombre").value.trim();
+      const email = document.getElementById("new-user-email").value.trim().toLowerCase();
+      const password = document.getElementById("new-user-pass").value.trim();
+      const rol = document.getElementById("new-user-rol").value;
+
+      if (!nombre || !email || !password) return notify("⚠️ Completa todos los campos", "#e67e22");
+
+      toggleLoader(true, "Creando usuario...");
+      const { error } = await db
+        .from("usuarios")
+        .insert({ nombre, email, password, rol, activo: true });
+      toggleLoader(false);
+
+      if (error) {
+        return notify("❌ No se pudo crear (revisa si el correo ya existe)", "#e74c3c");
+      }
+
+      document.getElementById("new-user-nombre").value = "";
+      document.getElementById("new-user-email").value = "";
+      document.getElementById("new-user-pass").value = "";
+      notify("✅ Usuario agregado", "#27ae60");
+      cargarUsuarios();
+    }
+
+    async function cambiarRolUsuario(id, nuevoRol) {
+      toggleLoader(true, "Actualizando rol...");
+      const { error } = await db.from("usuarios").update({ rol: nuevoRol }).eq("id", id);
+      toggleLoader(false);
+      if (error) return notify("❌ Error al actualizar rol", "#e74c3c");
+      notify(`✅ Rol cambiado a ${nuevoRol}`, "#27ae60");
+      cargarUsuarios();
+    }
+
+    async function toggleEstadoUsuario(id, activo) {
+      toggleLoader(true, "Actualizando estado...");
+      const { error } = await db.from("usuarios").update({ activo }).eq("id", id);
+      toggleLoader(false);
+      if (error) return notify("❌ Error al actualizar estado", "#e74c3c");
+      notify("✅ Estado actualizado", "#27ae60");
+      cargarUsuarios();
+    }
+
+    /* Almacenamiento DVR y Correos */
+    async function abrirDvr() {
+      if (!userData || userData.rol !== "Controlista") return;
+      document.getElementById("modal-dvr").style.display = "flex";
+      await cargarConfiguracion();
+
+      document.getElementById("cfg-dias-retencion").value = configSistema.dias_retencion_fotos ?? 30;
+      document.getElementById("cfg-dias-aviso").value = configSistema.dias_aviso_previo ?? 5;
+      document.getElementById("cfg-correos-mov").value = configSistema.correos_movimientos || "";
+      document.getElementById("cfg-correos-dvr").value = configSistema.correos_alertas_dvr || "";
+      document.getElementById("cfg-webhook-url").value = configSistema.webhook_correo_url || "";
+
+      await refrescarMetricasDvr();
+    }
+
+    async function guardarConfiguracion() {
+      const diasRetencion = Math.max(1, Number(document.getElementById("cfg-dias-retencion").value || 30));
+      const diasAviso = Math.max(1, Math.min(diasRetencion - 1, Number(document.getElementById("cfg-dias-aviso").value || 5)));
+      const correosMov = document.getElementById("cfg-correos-mov").value.trim();
+      const correosDvr = document.getElementById("cfg-correos-dvr").value.trim();
+      const webhookUrl = document.getElementById("cfg-webhook-url").value.trim();
+
+      toggleLoader(true, "Guardando configuración...");
+      const payload = {
+        id: 1,
+        dias_retencion_fotos: diasRetencion,
+        dias_aviso_previo: diasAviso,
+        correos_movimientos: correosMov,
+        correos_alertas_dvr: correosDvr,
+        webhook_correo_url: webhookUrl,
+        actualizado_en: new Date().toISOString()
+      };
+
+      const { error } = await db.from("configuracion_sistema").upsert(payload);
+      toggleLoader(false);
+
+      if (error) return notify("❌ Error al guardar configuración", "#e74c3c");
+      configSistema = { ...configSistema, ...payload };
+      notify("✅ Configuración guardada", "#27ae60");
+      refrescarMetricasDvr();
+    }
+
+    async function refrescarMetricasDvr() {
+      const { data: fotos } = await db
+        .from("fotos_evidencia")
+        .select("id, ruta_storage, url_publica, vin, usuario, tamano_bytes, aviso_enviado, creado_en")
+        .order("creado_en", { ascending: true });
+
+      const lista = fotos || [];
+      const totalBytes = lista.reduce((acc, f) => acc + Number(f.tamano_bytes || 0), 0);
+      const mb = (totalBytes / (1024 * 1024)).toFixed(2);
+
+      const retencionDias = Number(configSistema.dias_retencion_fotos || 30);
+      const avisoDias = Number(configSistema.dias_aviso_previo || 5);
+      const umbralAvisoDias = Math.max(0, retencionDias - avisoDias);
+      const ahora = Date.now();
+
+      const porVencer = lista.filter(f => {
+        const edadDias = (ahora - new Date(f.creado_en).getTime()) / 86400000;
+        return edadDias >= umbralAvisoDias;
+      });
+
+      document.getElementById("dvr-total-fotos").innerText = lista.length;
+      document.getElementById("dvr-espacio-mb").innerText = `${mb} MB`;
+      document.getElementById("dvr-por-vencer").innerText = porVencer.length;
+
+      const banner = document.getElementById("dvr-alerta-banner");
+      if (porVencer.length > 0) {
+        banner.style.display = "block";
+        banner.innerHTML = `⚠️ Hay <strong>${porVencer.length}</strong> foto(s) que ya superaron el umbral de aviso (${umbralAvisoDias} días) o cumplieron la retención de <strong>${retencionDias} días</strong>.`;
+      } else {
+        banner.style.display = "none";
+      }
+
+      if (!lista.length) {
+        document.getElementById("dvr-tabla-fotos").innerHTML = "<p>No hay fotos registradas en el bucket.</p>";
+        return;
+      }
+
+      let html = "<table><thead><tr><th>Fecha</th><th>VIN</th><th>Usuario</th><th>Edad</th><th>Tamaño</th><th>Enlace</th></tr></thead><tbody>";
+      lista.slice(0, 25).forEach(f => {
+        const edad = Math.max(0, Math.floor((ahora - new Date(f.creado_en).getTime()) / 86400000));
+        const kb = ((Number(f.tamano_bytes || 0)) / 1024).toFixed(0);
+        const fechaTxt = f.creado_en ? new Date(f.creado_en).toLocaleDateString("es-MX") : "-";
+        html += `
+          <tr>
+            <td>${escapeHtml(fechaTxt)}</td>
+            <td>${escapeHtml(f.vin || "-")}</td>
+            <td>${escapeHtml(f.usuario || "-")}</td>
+            <td>${edad} días</td>
+            <td>${kb} KB</td>
+            <td>${f.url_publica ? `<a href="${escapeHtml(f.url_publica)}" target="_blank">Ver</a>` : "-"}</td>
+          </tr>
+        `;
+      });
+      document.getElementById("dvr-tabla-fotos").innerHTML = html + "</tbody></table>";
+    }
+
+    async function ejecutarLimpiezaDvr() {
+      const retencionDias = Number(configSistema.dias_retencion_fotos || 30);
+      const avisoDias = Number(configSistema.dias_aviso_previo || 5);
+      const umbralAvisoDias = Math.max(0, retencionDias - avisoDias);
+      const ahora = Date.now();
+
+      toggleLoader(true, "Evaluando retención DVR...");
+
+      const { data: fotos, error } = await db
+        .from("fotos_evidencia")
+        .select("id, ruta_storage, vin, usuario, aviso_enviado, creado_en")
+        .order("creado_en", { ascending: true });
+
+      if (error) {
+        toggleLoader(false);
+        return notify("❌ Error al consultar fotos", "#e74c3c");
+      }
+
+      const lista = fotos || [];
+      const paraBorrar = [];
+      const paraAvisar = [];
+
+      lista.forEach(f => {
+        const edadDias = (ahora - new Date(f.creado_en).getTime()) / 86400000;
+        if (edadDias >= retencionDias) {
+          paraBorrar.push(f);
+        } else if (edadDias >= umbralAvisoDias && !f.aviso_enviado) {
+          paraAvisar.push(f);
+        }
+      });
+
+      if (paraAvisar.length > 0) {
+        const idsAviso = paraAvisar.map(x => x.id);
+        await db
+          .from("fotos_evidencia")
+          .update({ aviso_enviado: true, fecha_aviso: new Date().toISOString() })
+          .in("id", idsAviso);
+
+        await enviarNotificacionCorreo("dvr", {
+          evento: "aviso_previo_eliminacion",
+          dias_retencion: retencionDias,
+          cantidad: paraAvisar.length,
+          archivos: paraAvisar.map(x => x.ruta_storage)
+        });
+      }
+
+      if (paraBorrar.length > 0) {
+        const rutas = paraBorrar.map(x => x.ruta_storage).filter(Boolean);
+        if (rutas.length > 0) {
+          await db.storage.from(BUCKET_NAME).remove(rutas);
+        }
+        const idsBorrar = paraBorrar.map(x => x.id);
+        await db.from("fotos_evidencia").delete().in("id", idsBorrar);
+
+        await enviarNotificacionCorreo("dvr", {
+          evento: "purga_completada",
+          dias_retencion: retencionDias,
+          eliminadas: paraBorrar.length,
+          archivos: rutas
+        });
+      }
+
+      toggleLoader(false);
+      notify(`✅ DVR listo: ${paraBorrar.length} eliminadas, ${paraAvisar.length} avisadas`, "#27ae60");
+      refrescarMetricasDvr();
     }
 
     async function verMisLlaves() {
